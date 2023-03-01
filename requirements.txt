@@ -1,2 +1,5 @@
-tika
+tika~=2.6.0
 configparser
+future==0.18.3
+pathlib~=1.0.1
+Pillow~=9.4.0

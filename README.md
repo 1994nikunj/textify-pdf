@@ -26,6 +26,12 @@ The `config.ini` file can be used to configure the script. It has the following 
 - `log_path`: The full path to a log file. If not set, logs will be printed to the console.
 - `extractor_options`: Options to pass to the Tika PDF extractor. See the [Tika documentation](https://cwiki.apache.org/confluence/display/tika/PDFParser) for a list of available options.
 
+## Usage screenshot Samples
+
+![folder_selection.png](assets%2Ffolder_selection.png)
+
+![success.png](assets%2Fsuccess.png)
+
 ## License
 
 Textify-PDF is licensed under the [MIT License](https://github.com/username/repo/blob/master/LICENSE).

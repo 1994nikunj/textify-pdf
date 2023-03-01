@@ -1,20 +1,17 @@
-# glob: used to find all .pdf files in the specified folder
 import glob
-# logging: used for logging error messages
 import logging
-# os: used for file path manipulation and joining
 import os
-# zipfile: used for creating a zip file
+import tkinter as tk
+import tkinter.messagebox as messagebox
+import warnings
 import zipfile
-# configparser: used for reading configuration settings from a .ini file
-from configparser import ConfigParser
-# datetime: used for measuring the execution time of the script
-from datetime import datetime
-# pathlib: used for creating directories if they don't exist
 from pathlib import Path
+from tkinter import filedialog
 
-# tika.parser: used for extracting text from PDF files
+from PIL import Image, ImageTk
 from tika import parser
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def extract_text_pdf(file_path):
@@ -60,32 +57,80 @@ def extract_text_from_folder(data_path, generate_zip=True):
     return _results
 
 
+class Application(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.extract_button_photo = None
+        self.folder_path = None
+        self.generate_zip = None
+
+        self.master = master
+        self.master.title("PDF Text Extractor")
+        self.master.geometry("530x160")
+        self.master.configure(bg="#333333")
+        self.pack(fill="both", expand=True, padx=20, pady=20)
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = tk.Frame(self, bg="#333333")
+        main_frame.pack(fill="both")
+
+        folder_frame = tk.Frame(main_frame, bg="#333333", pady=10)
+        folder_frame.pack(fill="x", padx=5)
+
+        folder_label = tk.Label(folder_frame, text="Select a folder:", bg="#333333", fg="white")
+        folder_label.pack(side="left")
+
+        self.folder_path = tk.StringVar()
+        folder_entry = tk.Entry(folder_frame, textvariable=self.folder_path, width=50)
+        folder_entry.pack(side="left", padx=10)
+
+        folder_button = tk.Button(folder_frame, text="Browse", command=self.browse_folder, bg="#4e8752", fg="white",
+                                  padx=10)
+        folder_button.pack(side="left")
+
+        options_frame = tk.Frame(main_frame, bg="#333333")
+        options_frame.pack(fill="x")
+
+        self.generate_zip = tk.BooleanVar()
+        zip_checkbutton = tk.Checkbutton(options_frame,
+                                         text="Generate zip file",
+                                         variable=self.generate_zip,
+                                         bg="#333333",
+                                         fg="white",
+                                         activebackground="#4e8752",
+                                         selectcolor="#333333")
+        zip_checkbutton.pack(side="left")
+
+        extract_frame = tk.Frame(main_frame,
+                                 bg="#333333")
+        extract_frame.pack(fill="x")
+
+        extract_button_photo = Image.open("assets/extract_button.png")
+        extract_button_photo = extract_button_photo.resize((50, 50), Image.ANTIALIAS)
+        self.extract_button_photo = ImageTk.PhotoImage(extract_button_photo)
+        extract_button = tk.Button(extract_frame, image=self.extract_button_photo, command=self.extract_text,
+                                   bg="#333333", borderwidth=0)
+        extract_button.pack(side="left")
+
+    def browse_folder(self):
+        folder_path = filedialog.askdirectory()
+        self.folder_path.set(folder_path)
+
+    def extract_text(self):
+        folder_path = self.folder_path.get()
+        generate_zip = self.generate_zip.get()
+        results = extract_text_from_folder(folder_path, generate_zip)
+        message = f"Text extraction complete. Processed {len(results)} PDF files in total."
+        if generate_zip:
+            message += f" Text files saved in {os.path.join(folder_path, 'Results')}. Zip file saved in " \
+                       f"{os.path.join(folder_path, 'Results.zip')}."
+        else:
+            message += f" Text files saved in {os.path.join(folder_path, 'Results')}."
+        tk.messagebox.showinfo("Extraction Results", message)
+
+
 if __name__ == '__main__':
-    create_zip = True
-
-    config = ConfigParser()
-    config.read('config.ini')
-
-    log_path = config['DEFAULT'].get('log_path')
-    folder_path = config['DEFAULT'].get('folder_path')
-    if log_path:
-        logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-    else:
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-
-    start_time = datetime.now()
-    logging.info(f'Start time: {start_time}')
-
-    if not folder_path:
-        folder_path = input('Enter the path to the folder containing the PDF files: ')
-
-    results = extract_text_from_folder(folder_path, generate_zip=create_zip)
-
-    end_time = datetime.now()
-    logging.info(f'End time: {end_time}')
-    logging.info(f'Total time taken: {end_time - start_time}')
-
-    print('\nText extraction complete.')
-    print(f'Processed {len(results)} PDF files in total.')
-    print(f'Text files saved in {os.path.join(folder_path, "txt")}.')
-    print(f'Zip file saved in {os.path.join(folder_path, "txt.zip")}.')
+    root = tk.Tk()
+    app = Application(master=root)
+    app.mainloop()
