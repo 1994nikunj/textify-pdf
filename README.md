@@ -6,7 +6,6 @@ Textify-PDF is a Python script that extracts text from all PDF files in a specif
 
 1. Clone the repository or download the ZIP file and extract it to a folder.
 2. Install the required Python libraries using pip: `pip install -r requirements.txt`
-3. (Optional) Configure the script using the `config.ini` file.
 
 ## Usage
 
@@ -18,13 +17,6 @@ The script will extract text from all PDF files in the specified folder and save
 It also generates a zip file containing all the processed .txt files.
 
 New feature: The script now supports processing of password-protected PDF files. If a password-protected PDF file is encountered, the script will skip the file and log a warning message.
-
-## Configuration
-
-The `config.ini` file can be used to configure the script. It has the following options:
-
-- `log_path`: The full path to a log file. If not set, logs will be printed to the console.
-- `extractor_options`: Options to pass to the Tika PDF extractor. See the [Tika documentation](https://cwiki.apache.org/confluence/display/tika/PDFParser) for a list of available options.
 
 ## Usage screenshot Samples
 
