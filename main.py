@@ -35,24 +35,24 @@ def extract_text_pdf(file_path):
     return text
 
 
-def extract_text_from_folder(folder_path, generate_zip=True):
+def extract_text_from_folder(data_path, generate_zip=True):
     """Extract text from all PDF files in the specified folder path."""
-    all_files = glob.glob(os.path.join(folder_path, '*.pdf'))
+    all_files = glob.glob(os.path.join(data_path, '*.pdf'))
     _results = dict()
     for pdf_file in all_files:
         _results[pdf_file] = extract_text_pdf(pdf_file)
 
     if generate_zip:
-        txt_path = os.path.join(folder_path, 'txt')
+        txt_path = os.path.join(data_path, 'Results')
         Path(txt_path).mkdir(parents=True, exist_ok=True)
         txt_files = []
         for pdf_path, text in _results.items():
-            txt_file_path = pdf_path.replace(folder_path, txt_path).replace('.pdf', '.txt')
+            txt_file_path = pdf_path.replace(data_path, txt_path).replace('.pdf', '.txt')
             txt_files.append(txt_file_path)
             with open(txt_file_path, 'w', encoding='utf-8') as f:
                 f.write(text)
 
-        zip_path = os.path.join(folder_path, 'txt.zip')
+        zip_path = os.path.join(txt_path, 'Results.zip')
         with zipfile.ZipFile(zip_path, 'w') as zip_file:
             for txt_file in txt_files:
                 zip_file.write(txt_file)
@@ -65,7 +65,9 @@ if __name__ == '__main__':
 
     config = ConfigParser()
     config.read('config.ini')
+
     log_path = config['DEFAULT'].get('log_path')
+    folder_path = config['DEFAULT'].get('folder_path')
     if log_path:
         logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     else:
@@ -74,9 +76,10 @@ if __name__ == '__main__':
     start_time = datetime.now()
     logging.info(f'Start time: {start_time}')
 
-    path = input('Enter the path to the folder containing the PDF files: ')
+    if not folder_path:
+        folder_path = input('Enter the path to the folder containing the PDF files: ')
 
-    results = extract_text_from_folder(path, generate_zip=create_zip)
+    results = extract_text_from_folder(folder_path, generate_zip=create_zip)
 
     end_time = datetime.now()
     logging.info(f'End time: {end_time}')
@@ -84,5 +87,5 @@ if __name__ == '__main__':
 
     print('\nText extraction complete.')
     print(f'Processed {len(results)} PDF files in total.')
-    print(f'Text files saved in {os.path.join(path, "txt")}.')
-    print(f'Zip file saved in {os.path.join(path, "txt.zip")}.')
+    print(f'Text files saved in {os.path.join(folder_path, "txt")}.')
+    print(f'Zip file saved in {os.path.join(folder_path, "txt.zip")}.')
