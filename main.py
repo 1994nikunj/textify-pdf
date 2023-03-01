@@ -1,101 +1,88 @@
-# Extract raw textual information from pdf files located in the working directory and save it in a .txt file.
-
+# glob: used to find all .pdf files in the specified folder
 import glob
+# logging: used for logging error messages
+import logging
+# os: used for file path manipulation and joining
 import os
+# zipfile: used for creating a zip file
 import zipfile
+# configparser: used for reading configuration settings from a .ini file
+from configparser import ConfigParser
+# datetime: used for measuring the execution time of the script
 from datetime import datetime
+# pathlib: used for creating directories if they don't exist
+from pathlib import Path
 
+# tika.parser: used for extracting text from PDF files
 from tika import parser
 
 
-# Extract a text from a given pdf file (full path required)
-def extract_text_pdf(file_name):
-    raw_text = parser.from_file(file_name)
-    text_l = raw_text['content'].splitlines()
+def extract_text_pdf(file_path):
+    """Extract text from a given PDF file (full path required)."""
+    try:
+        raw_text = parser.from_file(file_path)
+        text = raw_text['content']
+    except KeyError:
+        logging.warning(f'No "content" key found in the extracted PDF file: {file_path}')
+        text = ''
+    except ValueError:
+        logging.warning(f'The PDF file {file_path} appears to be encrypted or corrupted')
+        text = ''
+    except Exception as e:
+        logging.warning(f'Could not extract text from {file_path}. Reason: {str(e)}')
+        text = ''
 
-    return ' '.join(word for word in text_l)
-
-
-# cleans text
-def txt_clean(word_list, min_len):
-    clean_words = []
-    for line in word_list:
-        parts = line.strip().split()
-        for word in parts:
-            word_l = word.lower()
-            # print (word_l, '\n', '\n')
-            if word_l.isalpha():
-                if len(word_l) > min_len:
-                    clean_words.append(word_l)
-
-    return clean_words
+    return text
 
 
-# Scans the given folder for *.pdf files and extract all the text available
-def extract_text_from_folder_of_pdfs(folder_path, txt=True):
-    all_files = glob.glob("%s/*.pdf" % (folder_path,))
-    rtn_dict = dict.fromkeys(all_files)
-    # print (rtn_dict)
-
-    folder_path_txt = folder_path + '/txt'
-    if not os.path.exists(folder_path + '/txt'):
-        os.makedirs(folder_path_txt)
-
+def extract_text_from_folder(folder_path, generate_zip=True):
+    """Extract text from all PDF files in the specified folder path."""
+    all_files = glob.glob(os.path.join(folder_path, '*.pdf'))
+    _results = dict()
     for pdf_file in all_files:
-        try:
-            rtn_dict[pdf_file] = extract_text_pdf(pdf_file)
-            # print('\n', pdf_file, ': done')
-        except Exception:
-            # print('\n', pdf_file, ': pdf is not readable')
-            pass
+        _results[pdf_file] = extract_text_pdf(pdf_file)
 
-    if txt:
-        txt_file_list = []
+    if generate_zip:
+        txt_path = os.path.join(folder_path, 'txt')
+        Path(txt_path).mkdir(parents=True, exist_ok=True)
+        txt_files = []
+        for pdf_path, text in _results.items():
+            txt_file_path = pdf_path.replace(folder_path, txt_path).replace('.pdf', '.txt')
+            txt_files.append(txt_file_path)
+            with open(txt_file_path, 'w', encoding='utf-8') as f:
+                f.write(text)
 
-        for i in rtn_dict.keys():
-            try:
-                txt_i = (i.replace(folder_path, folder_path_txt)).replace(".pdf", ".txt")
-                txt_file_list.append(txt_i)
-                text_file = open(txt_i, "w")
-                text_file.write(rtn_dict[i])
-                text_file.close()
-            except Exception:
-                pass
+        zip_path = os.path.join(folder_path, 'txt.zip')
+        with zipfile.ZipFile(zip_path, 'w') as zip_file:
+            for txt_file in txt_files:
+                zip_file.write(txt_file)
 
-    # asking the user if they want a zip file to be generated
-    zip_y_n = input('\ndo you want a zip file to be generated from the txt files? (y/n) ')
-
-    if zip_y_n == 'y':
-        # generating "output.zip" file with txt files in the specified folder path
-        get_zip(folder_path_txt)
-        print('\n-zip file generated\n')
-
-    return rtn_dict
-
-
-# This function will return a zipfile containing all .txt outputs generated in the specified folder.
-def get_zip(_path):
-    file_list = glob.glob(_path + '/*.txt')
-
-    if len(file_list):
-        with zipfile.ZipFile(_path + '/all_texts.zip', 'w') as zip:
-            for file_name in file_list:
-                zip.write(file_name)
+    return _results
 
 
 if __name__ == '__main__':
-    print('\n-Starting the pdf to txt conversion process-\n')
+    create_zip = True
+
+    config = ConfigParser()
+    config.read('config.ini')
+    log_path = config['DEFAULT'].get('log_path')
+    if log_path:
+        logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
     start_time = datetime.now()
-    print('--- starting time: {}'.format(start_time))
+    logging.info(f'Start time: {start_time}')
 
-    # asking the user for the folder path name
-    # print ('\n please enter the path of the folder where your pdf files are')
+    path = input('Enter the path to the folder containing the PDF files: ')
 
-    folder_path = 'doc_folder'
+    results = extract_text_from_folder(path, generate_zip=create_zip)
 
-    # extracting text from all .pdf files in the specified folder path
-    extract_text_from_folder_of_pdfs(folder_path)
+    end_time = datetime.now()
+    logging.info(f'End time: {end_time}')
+    logging.info(f'Total time taken: {end_time - start_time}')
 
-    print('\n--- this is the end of the process ---\n')
-
-    print('--- total duration: {}'.format(datetime.now() - start_time))
+    print('\nText extraction complete.')
+    print(f'Processed {len(results)} PDF files in total.')
+    print(f'Text files saved in {os.path.join(path, "txt")}.')
+    print(f'Zip file saved in {os.path.join(path, "txt.zip")}.')
